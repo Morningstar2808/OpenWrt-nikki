@@ -1,0 +1,137 @@
+name: upstream-sync
+
+# Ежедневно подтягивает апстрим:
+#   main -> точное зеркало nikkinikki-org/OpenWrt-nikki@main
+#   fork -> ваши коммиты, перебазированные поверх апстрима
+# При конфликте rebase откатывается, джоба падает (GitHub пришлёт письмо),
+# подробности — в Summary прогона. Issues не используются: нужен только contents:write.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  UPSTREAM_URL: https://github.com/nikkinikki-org/OpenWrt-nikki.git
+  UPSTREAM_BRANCH: main
+  MIRROR_BRANCH: main
+  FORK_BRANCH: fork
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          # SYNC_TOKEN (PAT с правом contents) нужен только если хотите,
+          # чтобы push от этого воркфлоу триггерил другие воркфлоу.
+          token: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: prepare git
+        run: |
+          set -eux
+          git config user.name  "upstream-sync[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config rerere.enabled true
+          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
+          git fetch --tags upstream "$UPSTREAM_BRANCH"
+          git fetch --tags origin
+
+      - name: mirror upstream into ${{ env.MIRROR_BRANCH }}
+        run: |
+          set -eux
+          git checkout -B "$MIRROR_BRANCH" "origin/$MIRROR_BRANCH"
+          if git merge-base --is-ancestor HEAD "upstream/$UPSTREAM_BRANCH"; then
+            git merge --ff-only "upstream/$UPSTREAM_BRANCH"
+            git push origin "$MIRROR_BRANCH"
+          else
+            # в зеркало кто-то закоммитил — выравниваем принудительно
+            git reset --hard "upstream/$UPSTREAM_BRANCH"
+            git push --force origin "$MIRROR_BRANCH"
+          fi
+
+      - name: rebase ${{ env.FORK_BRANCH }} onto upstream
+        id: rebase
+        run: |
+          set -eux
+          git checkout -B "$FORK_BRANCH" "origin/$FORK_BRANCH"
+          before="$(git rev-parse HEAD)"
+          if git rebase "upstream/$UPSTREAM_BRANCH"; then
+            after="$(git rev-parse HEAD)"
+            if [ "$before" = "$after" ]; then
+              echo "result=uptodate" >> "$GITHUB_OUTPUT"
+            else
+              git push --force-with-lease origin "$FORK_BRANCH"
+              echo "result=rebased" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            git rebase --abort || true
+            echo "result=conflict" >> "$GITHUB_OUTPUT"
+          fi
+          latest_tag="$(git tag --list 'v*' --sort=-v:refname --merged "upstream/$UPSTREAM_BRANCH" | head -n 1)"
+          fork_release=""
+          if [ -n "$latest_tag" ]; then
+            fork_release="$(git tag --list "${latest_tag}-ms*" | head -n 1)"
+          fi
+          {
+            echo "upstream_head=$(git rev-parse --short "upstream/$UPSTREAM_BRANCH")"
+            echo "upstream_tag=$latest_tag"
+            echo "fork_release_exists=$fork_release"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: summary
+        env:
+          RESULT: ${{ steps.rebase.outputs.result }}
+          UPSTREAM_HEAD: ${{ steps.rebase.outputs.upstream_head }}
+          UPSTREAM_TAG: ${{ steps.rebase.outputs.upstream_tag }}
+          FORK_RELEASE_EXISTS: ${{ steps.rebase.outputs.fork_release_exists }}
+        run: |
+          set -eu
+          {
+            echo "### upstream-sync"
+            echo ""
+            echo "- upstream HEAD: \`${UPSTREAM_HEAD}\`"
+            echo "- последний тег апстрима: \`${UPSTREAM_TAG}\`"
+            echo "- rebase: **${RESULT}**"
+            echo ""
+            if [ -n "${UPSTREAM_TAG}" ] && [ -z "${FORK_RELEASE_EXISTS}" ]; then
+              echo "#### Нужен релиз форка"
+              echo ""
+              echo "Апстрим выпустил \`${UPSTREAM_TAG}\`, вашего \`${UPSTREAM_TAG}-ms*\` ещё нет:"
+              echo ""
+              echo '```sh'
+              echo "git checkout fork && git pull"
+              echo "git tag -a ${UPSTREAM_TAG}-ms1 -m 'fork of ${UPSTREAM_TAG}'"
+              echo "git push origin ${UPSTREAM_TAG}-ms1"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: fail on conflict
+        if: steps.rebase.outputs.result == 'conflict'
+        run: |
+          {
+            echo ""
+            echo "#### Конфликт rebase"
+            echo ""
+            echo "Автоматический rebase откатён, \`origin/fork\` не тронут. Разрулить локально:"
+            echo ""
+            echo '```sh'
+            echo "git fetch --tags upstream"
+            echo "git checkout fork"
+            echo "git rebase upstream/main"
+            echo "# правим конфликты, затем: git add -A && git rebase --continue"
+            echo "git push --force-with-lease origin fork"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::rebase fork onto upstream/main завершился конфликтом"
+          exit 1

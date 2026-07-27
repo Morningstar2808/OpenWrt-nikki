@@ -1,0 +1,70 @@
+name: fork-release
+
+# Собирает пакеты форка и кладёт их в GitHub Releases.
+# Запуск: push тега вида v1.26.1-ms1, либо вручную (workflow_dispatch).
+#
+# Отличия от апстримного release-packages.yml:
+#   - урезанная матрица (полная = 72 джобы, для личного аккаунта это долго);
+#   - без Cloudflare Pages и без подписи фида: ставим .ipk/.apk напрямую.
+
+on:
+  push:
+    tags:
+      - "v*-ms*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.arch }}-${{ matrix.branch }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        # Оставьте только свои архитектуры. Узнать свою:
+        #   . /etc/openwrt_release; echo "$DISTRIB_ARCH $DISTRIB_RELEASE"
+        arch:
+          - aarch64_cortex-a53
+          - aarch64_generic
+          - mipsel_24kc
+          - x86_64
+        branch:
+          - openwrt-24.10
+          - openwrt-25.12
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: build
+        uses: openwrt/gh-action-sdk@main
+        env:
+          ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
+          FEEDNAME: nikki
+          # mihomo-alpha/mihomo-meta — тяжёлая сборка Go и в форке не менялись,
+          # поэтому собираем только свои пакеты (зависимости SDK доберёт сам).
+          PACKAGES: nikki luci-app-nikki
+          NO_REFRESH_CHECK: true
+
+      - name: compress
+        run: |
+          set -eux
+          tar -c -z -f "nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz" \
+            -C "bin/packages/${{ matrix.arch }}/nikki" .
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: nikki_${{ matrix.arch }}-${{ matrix.branch }}
+          path: nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
+
+      - name: release
+        if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          files: nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
+          fail_on_unmatched_files: true
