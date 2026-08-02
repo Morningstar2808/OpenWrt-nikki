@@ -1125,3 +1125,51 @@ msgstr "用户名"
 #: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/app.js:128
 msgid "procd Config"
 msgstr "procd 配置"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "HWID"
+msgstr "HWID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Send device identification headers with the subscription request. Required by panels which bind a subscription to a device."
+msgstr "在订阅请求中发送设备识别标头。绑定订阅到设备的面板需要此选项。"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device ID"
+msgstr "设备 ID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Derived from the hardware of this router and kept across restarts."
+msgstr "根据本路由器的硬件信息生成，并在重启后保持不变。"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Expected 1 to 64 characters: letters, digits, dot, hyphen or underscore"
+msgstr "应为 1 至 64 个字符：字母、数字、点、连字符或下划线"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate Device ID"
+msgstr "重新生成设备 ID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Issue a new random device id, for example after the subscription was reset by the provider."
+msgstr "生成一个新的随机设备 ID，例如在服务商重置订阅之后。"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate"
+msgstr "重新生成"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device OS"
+msgstr "设备系统"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "OS Version"
+msgstr "系统版本"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device Model"
+msgstr "设备型号"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Printable ASCII characters only"
+msgstr "仅限可打印的 ASCII 字符"

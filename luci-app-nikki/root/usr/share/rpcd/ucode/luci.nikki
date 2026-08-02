@@ -93,6 +93,21 @@ const methods = {
 			return result;
 		}
 	},
+	hwid_info: {
+		call: function() {
+			let info = {};
+			const process = popen('/etc/init.d/nikki hwid_info 2>/dev/null');
+			if (process) {
+				try {
+					info = json(process) ?? {};
+				} catch (e) {
+					info = {};
+				}
+				process.close();
+			}
+			return info;
+		}
+	},
 	get_identifiers: {
 		call: function() {
 			const users = filter(get_users(), (x) => x != '');

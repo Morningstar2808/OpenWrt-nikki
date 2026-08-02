@@ -229,6 +229,55 @@ log_scheduled_clear_size_limit_unit=$(uci -q get nikki.log.scheduled_clear_size_
 
 config_clear_at_stop=$(uci -q get nikki.log.clear_at_stop); [ -z "$config_clear_at_stop" ] && uci set nikki.log.clear_at_stop=1
 
+# since v1.26.2: replace the free-form "header" list with dedicated HWID options
+#
+# The presence of the "header" list is itself the migration marker: it is removed
+# at the end, so re-running this script is a no-op. Do NOT gate this on the "hwid"
+# option -- LuCI writes hwid='0' on the first save of any subscription, which would
+# permanently block the migration.
+
+nikki_migrate_hwid_header() {
+	local value; value="$1"
+	local section; section="$2"
+	local name; name="$(printf '%s' "${value%%:*}" | tr 'A-Z' 'a-z')"
+	local content; content="$(printf '%s' "${value#*:}" | sed 's/^[[:space:]]*//')"
+	case "$name" in
+		x-hwid)
+			[ -n "$(uci -q get "nikki.$section.hwid")" ] || uci set "nikki.$section.hwid=1"
+			[ -n "$(uci -q get "nikki.$section.hwid_value")" ] || uci set "nikki.$section.hwid_value=$content"
+		;;
+		x-device-os)
+			[ -n "$(uci -q get "nikki.$section.hwid_device_os")" ] || uci set "nikki.$section.hwid_device_os=$content"
+		;;
+		x-ver-os)
+			[ -n "$(uci -q get "nikki.$section.hwid_ver_os")" ] || uci set "nikki.$section.hwid_ver_os=$content"
+		;;
+		x-device-model)
+			[ -n "$(uci -q get "nikki.$section.hwid_device_model")" ] || uci set "nikki.$section.hwid_device_model=$content"
+		;;
+		*)
+			logger -t nikki -p daemon.warn "migrate: dropped unsupported request header $name from subscription $section"
+		;;
+	esac
+}
+
+nikki_migrate_hwid() {
+	local section; section="$1"
+	local header; header="$(uci -q get "nikki.$section.header")"
+	if [ -z "$header" ]; then
+		return
+	fi
+	config_list_foreach "$section" "header" nikki_migrate_hwid_header "$section"
+	uci -q delete "nikki.$section.header"
+	[ -n "$(uci -q get "nikki.$section.hwid")" ] || uci set "nikki.$section.hwid=0"
+}
+
+if [ -f "$IPKG_INSTROOT/lib/functions.sh" ]; then
+	. "$IPKG_INSTROOT/lib/functions.sh"
+	config_load nikki
+	config_foreach nikki_migrate_hwid "subscription"
+fi
+
 # commit
 uci commit nikki
 

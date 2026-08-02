@@ -1125,3 +1125,51 @@ msgstr "使用者名稱"
 #: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/app.js:128
 msgid "procd Config"
 msgstr "procd 設定"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "HWID"
+msgstr "HWID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Send device identification headers with the subscription request. Required by panels which bind a subscription to a device."
+msgstr "在訂閱請求中傳送裝置識別標頭。將訂閱綁定至裝置的面板需要此選項。"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device ID"
+msgstr "裝置 ID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Derived from the hardware of this router and kept across restarts."
+msgstr "根據本路由器的硬體資訊產生，並在重新啟動後保持不變。"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Expected 1 to 64 characters: letters, digits, dot, hyphen or underscore"
+msgstr "應為 1 至 64 個字元：字母、數字、點、連字號或底線"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate Device ID"
+msgstr "重新產生裝置 ID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Issue a new random device id, for example after the subscription was reset by the provider."
+msgstr "產生一個新的隨機裝置 ID，例如在服務商重設訂閱之後。"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate"
+msgstr "重新產生"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device OS"
+msgstr "裝置系統"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "OS Version"
+msgstr "系統版本"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device Model"
+msgstr "裝置型號"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Printable ASCII characters only"
+msgstr "僅限可列印的 ASCII 字元"

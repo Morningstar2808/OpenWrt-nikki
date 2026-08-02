@@ -1125,3 +1125,51 @@ msgstr "Имя пользователя"
 #: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/app.js:128
 msgid "procd Config"
 msgstr "Настройки procd"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "HWID"
+msgstr "HWID"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Send device identification headers with the subscription request. Required by panels which bind a subscription to a device."
+msgstr "Отправлять заголовки идентификации устройства вместе с запросом подписки. Требуется панелями, которые привязывают подписку к устройству."
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device ID"
+msgstr "Идентификатор устройства"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Derived from the hardware of this router and kept across restarts."
+msgstr "Вычисляется из аппаратных данных этого роутера и сохраняется между перезагрузками."
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Expected 1 to 64 characters: letters, digits, dot, hyphen or underscore"
+msgstr "Ожидается от 1 до 64 символов: буквы, цифры, точка, дефис или подчёркивание"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate Device ID"
+msgstr "Сменить идентификатор устройства"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Issue a new random device id, for example after the subscription was reset by the provider."
+msgstr "Выдать новый случайный идентификатор, например после сброса подписки провайдером."
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate"
+msgstr "Сменить"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device OS"
+msgstr "ОС устройства"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "OS Version"
+msgstr "Версия ОС"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device Model"
+msgstr "Модель устройства"
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Printable ASCII characters only"
+msgstr "Только печатаемые символы ASCII"

@@ -31,6 +31,12 @@ const callNikkiVersion = rpc.declare({
     expect: { '': {} }
 });
 
+const callNikkiHWIDInfo = rpc.declare({
+    object: 'luci.nikki',
+    method: 'hwid_info',
+    expect: { '': {} }
+});
+
 const callNikkiProfile = rpc.declare({
     object: 'luci.nikki',
     method: 'profile',
@@ -194,6 +200,10 @@ return baseclass.extend({
 
     getIdentifiers: function () {
         return callNikkiGetIdentifiers();
+    },
+
+    hwidInfo: function () {
+        return callNikkiHWIDInfo();
     },
 
     listProfiles: function () {

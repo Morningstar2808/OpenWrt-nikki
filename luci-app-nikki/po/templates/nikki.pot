@@ -1118,3 +1118,51 @@ msgstr ""
 #: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/app.js:128
 msgid "procd Config"
 msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "HWID"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Send device identification headers with the subscription request. Required by panels which bind a subscription to a device."
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device ID"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Derived from the hardware of this router and kept across restarts."
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Expected 1 to 64 characters: letters, digits, dot, hyphen or underscore"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate Device ID"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Issue a new random device id, for example after the subscription was reset by the provider."
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Regenerate"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device OS"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "OS Version"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Device Model"
+msgstr ""
+
+#: applications/luci-app-nikki/htdocs/luci-static/resources/view/nikki/profile.js
+msgid "Printable ASCII characters only"
+msgstr ""
