@@ -65,5 +65,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           name: ${{ github.ref_name }}
+          # Тестовые сборки помечаются Pre-release. Снять, когда версия станет стабильной.
+          prerelease: true
           files: nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
           fail_on_unmatched_files: true
