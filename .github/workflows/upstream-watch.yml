@@ -122,6 +122,8 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          # без этого gh в форке адресует команды родительскому репозиторию
+          GH_REPO: ${{ github.repository }}
           TITLE: "upstream-watch: ${{ steps.collect.outputs.count }} новых коммитов (${{ steps.collect.outputs.range }})"
         run: |
           set -eu
