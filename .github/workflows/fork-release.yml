@@ -1,16 +1,15 @@
 name: fork-release
 
-# Собирает пакеты форка и кладёт их в GitHub Releases.
-# Запуск: push тега вида v1.26.1-ms1, либо вручную (workflow_dispatch).
+# Собирает пакеты и кладёт их в GitHub Releases.
+# Запуск: push любого тега вида v*, либо вручную (workflow_dispatch).
 #
-# Отличия от апстримного release-packages.yml:
-#   - урезанная матрица (полная = 72 джобы, для личного аккаунта это долго);
-#   - без Cloudflare Pages и без подписи фида: ставим .ipk/.apk напрямую.
+# Матрица урезана до 4 архитектур x 2 веток OpenWrt: полная (как у апстрима)
+# это 72 джобы. Без Cloudflare Pages и без подписи фида — ставим .ipk/.apk напрямую.
 
 on:
   push:
     tags:
-      - "v*-ms*"
+      - "v*"
   workflow_dispatch:
 
 permissions:

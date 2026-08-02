@@ -1,0 +1,131 @@
+name: upstream-watch
+
+# Следит за апстримом, НИЧЕГО не вливает в main.
+# Раз в сутки:
+#   1. обновляет ветку-зеркало `upstream` (чистая копия апстрима, для сравнения и cherry-pick);
+#   2. если с прошлой проверки появились новые коммиты — заводит issue со списком,
+#      затронутыми файлами и готовыми командами.
+# Что брать к себе — решаете вы, вручную, по одному коммиту.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+env:
+  UPSTREAM_URL: https://github.com/nikkinikki-org/OpenWrt-nikki.git
+  UPSTREAM_REPO: nikkinikki-org/OpenWrt-nikki
+  UPSTREAM_BRANCH: main
+  MIRROR_BRANCH: upstream
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: prepare git
+        run: |
+          set -eux
+          git config user.name  "upstream-watch[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM_URL" 2>/dev/null || git remote set-url upstream "$UPSTREAM_URL"
+          # теги апстрима намеренно не тянем: они не должны попадать в ваш репозиторий
+          git fetch --no-tags upstream "$UPSTREAM_BRANCH"
+          git fetch --no-tags origin "+refs/heads/$MIRROR_BRANCH:refs/remotes/origin/$MIRROR_BRANCH" || true
+
+      - name: collect changes
+        id: collect
+        run: |
+          set -eu
+          new_head="$(git rev-parse "upstream/$UPSTREAM_BRANCH")"
+          old_head=""
+          if git rev-parse --verify -q "origin/$MIRROR_BRANCH^{commit}" >/dev/null; then
+            old_head="$(git rev-parse "origin/$MIRROR_BRANCH")"
+          fi
+
+          count=0
+          if [ -z "$old_head" ]; then
+            {
+              echo "### upstream-watch"
+              echo ""
+              echo "Ветка-зеркало \`$MIRROR_BRANCH\` создана на \`$(git rev-parse --short "$new_head")\`."
+              echo "Со следующего запуска сюда будут попадать только новые коммиты апстрима."
+            } > report.md
+          elif [ "$old_head" = "$new_head" ]; then
+            {
+              echo "### upstream-watch"
+              echo ""
+              echo "Новых коммитов в апстриме нет (\`$(git rev-parse --short "$new_head")\`)."
+            } > report.md
+          else
+            count="$(git rev-list --no-merges --count "$old_head..$new_head")"
+            {
+              echo "### Новые коммиты апстрима"
+              echo ""
+              echo "[Сравнение $(git rev-parse --short "$old_head")...$(git rev-parse --short "$new_head")](https://github.com/${UPSTREAM_REPO}/compare/${old_head}...${new_head})"
+              echo ""
+              git log --no-merges --reverse \
+                --pretty=format:"- [\`%h\`](https://github.com/${UPSTREAM_REPO}/commit/%H) %s" \
+                "$old_head..$new_head"
+              echo ""
+              echo ""
+              echo "<details><summary>Затронутые файлы</summary>"
+              echo ""
+              echo '```'
+              git diff --stat "$old_head" "$new_head"
+              echo '```'
+              echo ""
+              echo "</details>"
+              echo ""
+              echo "Взять нужное к себе (по одному коммиту, остальное просто игнорируется):"
+              echo ""
+              echo '```sh'
+              echo "git fetch upstream"
+              echo "git checkout main"
+              echo "git cherry-pick <sha>"
+              echo "git push"
+              echo '```'
+              echo ""
+              echo "Ничего брать не обязательно — issue можно просто закрыть."
+            } > report.md
+          fi
+
+          {
+            echo "count=$count"
+            echo "new_head=$new_head"
+            echo "range=$(git rev-parse --short "${old_head:-$new_head}")..$(git rev-parse --short "$new_head")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: update mirror branch
+        run: |
+          set -eux
+          git push --force origin "${{ steps.collect.outputs.new_head }}:refs/heads/$MIRROR_BRANCH"
+
+      - name: summary
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: open issue
+        if: steps.collect.outputs.count != '0'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+          TITLE: "upstream-watch: ${{ steps.collect.outputs.count }} новых коммитов (${{ steps.collect.outputs.range }})"
+        run: |
+          set -eu
+          if gh issue list --state open --json title --jq '.[].title' | grep -qF "${{ steps.collect.outputs.range }}"; then
+            echo "issue про этот диапазон уже открыт"; exit 0
+          fi
+          gh issue create --title "$TITLE" --body-file report.md
