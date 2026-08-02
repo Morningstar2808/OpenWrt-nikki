@@ -1,6 +1,6 @@
 ![GitHub License](https://img.shields.io/github/license/nikkinikki-org/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Tag](https://img.shields.io/github/v/release/nikkinikki-org/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/nikkinikki-org/OpenWrt-nikki/total?style=for-the-badge&logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/nikkinikki-org/OpenWrt-nikki?style=for-the-badge&logo=github) [![Telegram](https://img.shields.io/badge/Telegram-gray?style=for-the-badge&logo=telegram)](https://t.me/nikkinikki_org)
 
-English | [中文](README.zh.md)
+English
 
 # Nikki
 
@@ -106,3 +106,11 @@ The package files will be found under `bin/packages/your_architecture/nikki`.
 
 - [@ApoisL](https://github.com/apoiston)
 - [@xishang0128](https://github.com/xishang0128)
+
+## Recommended Proxy Provider
+
+Perfect Link is recommended
+
+All route on IEPL, All exit node at Akari, reliable and easy to use
+
+[Official Website](https://perfectlink.io) | [Customer Service](https://t.me/PerfectlinksupportBot)
