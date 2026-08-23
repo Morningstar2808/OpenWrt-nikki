@@ -112,11 +112,3 @@ The package files will be found under `bin/packages/your_architecture/nikki`.
 - kmod-dummy
 
 ## Credits
-
-Upstream project by [nikkinikki-org](https://github.com/nikkinikki-org/OpenWrt-nikki) and its
-[contributors](https://github.com/nikkinikki-org/OpenWrt-nikki/graphs/contributors).
-
-## Special Thanks
-
-- [@ApoisL](https://github.com/apoiston)
-- [@xishang0128](https://github.com/xishang0128)
