@@ -10,7 +10,13 @@ name: fork-release
 # тег без суффикса (v1.27.0) — как обычный релиз.
 #
 # Матрица урезана до 4 архитектур x 2 веток OpenWrt: полная (как у апстрима)
-# это 72 джобы. Без Cloudflare Pages и без подписи фида — ставим .ipk/.apk напрямую.
+# это 72 джобы.
+#
+# Кроме обычных tar.gz релиз содержит feed.tar.gz — каталог фида с подписанными
+# индексами. Подпись: KEY_BUILD (usign, opkg) и PRIVATE_KEY (RSA, apk).
+# Тот же каталог публикуется на GitHub Pages:
+#   https://morningstar2808.github.io/OpenWrt-nikki/<ветка>/<arch>/nikki
+# Требует Settings -> Pages -> Source: GitHub Actions.
 #
 # Релиз создаёт отдельная джоба после матрицы: один вызов action-gh-release
 # вместо восьми параллельных, которые дерутся за один и тот же тег.
@@ -56,6 +62,9 @@ jobs:
           # mihomo-meta указан явно: у nikki зависимость на виртуальный +mihomo,
           # без явного выбора SDK берёт первого провайдера по алфавиту — alpha.
           PACKAGES: mihomo-meta nikki luci-app-nikki
+          INDEX: 1
+          KEY_BUILD: ${{ secrets.KEY_BUILD }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           NO_REFRESH_CHECK: true
 
       - name: compress
@@ -64,12 +73,23 @@ jobs:
           test -d "bin/packages/${{ matrix.arch }}/nikki"
           tar -c -z -f "nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz" \
             -C "bin/packages/${{ matrix.arch }}/nikki" .
+          mkdir -p "public/${{ matrix.branch }}/${{ matrix.arch }}"
+          cp -a "bin/packages/${{ matrix.arch }}/nikki" \
+            "public/${{ matrix.branch }}/${{ matrix.arch }}/nikki"
+          tar -c -z -f "feed_nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz" public
 
       - name: upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: nikki_${{ matrix.arch }}-${{ matrix.branch }}
           path: nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
+          if-no-files-found: error
+
+      - name: upload feed part
+        uses: actions/upload-artifact@v7
+        with:
+          name: feed_nikki_${{ matrix.arch }}-${{ matrix.branch }}
+          path: feed_nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
           if-no-files-found: error
 
   release:
@@ -102,11 +122,26 @@ jobs:
       - name: download artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: nikki_*
+          pattern: "*nikki_*"
           merge-multiple: true
 
-      - name: list files
-        run: ls -l nikki_*.tar.gz
+      - name: assemble feed
+        env:
+          KEY_BUILD_PUB: ${{ secrets.KEY_BUILD_PUB }}
+          PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
+        run: |
+          set -eux
+          for part in feed_nikki_*.tar.gz; do tar -x -z -f "$part"; done
+          rm -f feed_nikki_*.tar.gz
+          printf '%s\n' "$KEY_BUILD_PUB" > public/key-build.pub
+          printf '%s\n' "$PUBLIC_KEY" > public/public-key.pem
+          tar -c -z -f feed.tar.gz public
+          ls -l ./*.tar.gz
+
+      - name: upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
 
       - name: release
         uses: softprops/action-gh-release@v3
@@ -114,5 +149,24 @@ jobs:
           name: ${{ github.ref_name }}
           # Тег с суффиксом (-rc1, -beta1) -> Pre-release, без суффикса -> обычный релиз.
           prerelease: ${{ contains(github.ref_name, '-') }}
-          files: nikki_*.tar.gz
+          files: |
+            nikki_*.tar.gz
+            feed.tar.gz
           fail_on_unmatched_files: true
+
+  pages:
+    name: pages
+    needs: release
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+
+    steps:
+      - name: deploy
+        id: deploy
+        uses: actions/deploy-pages@v4
