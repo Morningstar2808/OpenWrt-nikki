@@ -53,9 +53,9 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}-${{ matrix.branch }}
           FEEDNAME: nikki
-          # mihomo-alpha/mihomo-meta — тяжёлая сборка Go и в форке не менялись,
-          # поэтому собираем только свои пакеты (зависимости SDK доберёт сам).
-          PACKAGES: nikki luci-app-nikki
+          # mihomo-meta указан явно: у nikki зависимость на виртуальный +mihomo,
+          # без явного выбора SDK берёт первого провайдера по алфавиту — alpha.
+          PACKAGES: mihomo-meta nikki luci-app-nikki
           NO_REFRESH_CHECK: true
 
       - name: compress

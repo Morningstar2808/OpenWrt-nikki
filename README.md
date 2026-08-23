@@ -39,18 +39,35 @@ wget -O - https://github.com/Morningstar2808/OpenWrt-nikki/raw/refs/heads/main/i
 ```
 
 The script detects the router's architecture and OpenWrt branch, downloads the
-matching asset from the latest release (pre-releases included) and installs the
-packages. Translations are installed only for languages already present on the
-router. Running it again installs a newer release — that is the update path.
+matching asset from the latest release (pre-releases included) and installs it.
+Running it again is the update path — and it is safe to repeat: only packages
+whose version differs from what is installed are touched, so an unchanged run
+leaves the service alone instead of restarting it.
 
-Pinning a specific version or another mirror:
+LuCI translations are not installed by default — the interface stays English.
+The script prints which translations the build contains.
+
+Options (arguments, or the matching `NIKKI_*` environment variables):
 
 ```shell
-# конкретный релиз
-NIKKI_TAG=v1.27.0-rc1 sh install.sh
-# другой репозиторий с теми же ассетами
-NIKKI_REPO=owner/repo sh install.sh
+# переводы LuCI: коды через пробел, или all
+wget -O - .../install.sh | ash -s -- --lang ru
+wget -O - .../install.sh | ash -s -- --lang "ru zh-cn"
+# ядро mihomo: meta (по умолчанию) или alpha
+wget -O - .../install.sh | ash -s -- --mihomo alpha
+# конкретный релиз / другое зеркало
+wget -O - .../install.sh | ash -s -- --tag v1.27.0-rc2 --repo owner/repo
+# переустановить, даже если версии совпадают
+wget -O - .../install.sh | ash -s -- --force
+# справка
+wget -O - .../install.sh | ash -s -- --help
 ```
+
+The release ships `mihomo-meta` — the core built from MetaCubeX's tagged
+releases. `mihomo-alpha` (nightly branch) is not included; the two packages
+conflict with each other, so exactly one is installed. If the other variant is
+already on the router, the script stops and prints the removal commands instead
+of breaking the install halfway.
 
 Manual install, if the script cannot be used:
 
