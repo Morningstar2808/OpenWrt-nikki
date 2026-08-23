@@ -53,8 +53,6 @@ Options (arguments, or the matching `NIKKI_*` environment variables):
 # переводы LuCI: коды через пробел, или all
 wget -O - .../install.sh | ash -s -- --lang ru
 wget -O - .../install.sh | ash -s -- --lang "ru zh-cn"
-# ядро mihomo: meta (по умолчанию) или alpha
-wget -O - .../install.sh | ash -s -- --mihomo alpha
 # конкретный релиз / другое зеркало
 wget -O - .../install.sh | ash -s -- --tag v1.27.0-rc2 --repo owner/repo
 # переустановить, даже если версии совпадают
@@ -63,11 +61,14 @@ wget -O - .../install.sh | ash -s -- --force
 wget -O - .../install.sh | ash -s -- --help
 ```
 
-The release ships `mihomo-meta` — the core built from MetaCubeX's tagged
-releases. `mihomo-alpha` (nightly branch) is not included; the two packages
-conflict with each other, so exactly one is installed. If the other variant is
-already on the router, the script stops and prints the removal commands instead
-of breaking the install halfway.
+The core is always `mihomo-meta`, built from MetaCubeX's tagged releases.
+`mihomo-alpha` (nightly branch) is never installed. If it is still present on
+the router from an earlier install, the script stops and prints the removal
+commands — the two packages conflict.
+
+Before installing the core the script also checks free space on `/overlay` and
+stops if there is not enough, instead of running the router out of memory
+halfway through unpacking.
 
 Manual install, if the script cannot be used:
 
@@ -128,4 +129,3 @@ The package files will be found under `bin/packages/your_architecture/nikki`.
 - kmod-tun
 - kmod-dummy
 
-## Credits

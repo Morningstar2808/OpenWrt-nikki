@@ -13,7 +13,6 @@
 #
 # Аргументы (или переменные окружения):
 #   --lang   <коды|all|none>   NIKKI_LANG    переводы LuCI, по умолчанию none
-#   --mihomo <meta|alpha>      NIKKI_MIHOMO  ядро, по умолчанию meta
 #   --tag    <тег>             NIKKI_TAG     конкретный релиз, по умолчанию последний
 #   --repo   <owner/repo>      NIKKI_REPO    другое зеркало релизов
 #   --force                                  переставить, даже если версии совпали
@@ -23,7 +22,6 @@ set -e
 
 REPO="${NIKKI_REPO:-Morningstar2808/OpenWrt-nikki}"
 TAG="${NIKKI_TAG:-}"
-MIHOMO="${NIKKI_MIHOMO:-meta}"
 LANG_SELECTION="${NIKKI_LANG:-none}"
 FORCE=0
 
@@ -32,7 +30,6 @@ usage() {
 nikki (fork) installer
 
   --lang   <коды|all|none>  переводы LuCI: "ru", "ru zh-cn", all. По умолчанию none
-  --mihomo <meta|alpha>     ядро mihomo. По умолчанию meta (стабильные релизы)
   --tag    <тег>            конкретный релиз, например v1.27.0-rc2
   --repo   <owner/repo>     другой репозиторий с теми же ассетами
   --force                   переустановить, даже если версии совпадают
@@ -41,7 +38,7 @@ nikki (fork) installer
 Примеры:
   wget -O - .../install.sh | ash
   wget -O - .../install.sh | ash -s -- --lang ru
-  wget -O - .../install.sh | ash -s -- --mihomo alpha --tag v1.27.0-rc2
+  wget -O - .../install.sh | ash -s -- --tag v1.27.0-rc2
 EOF
 }
 
@@ -49,8 +46,6 @@ while [ "$#" -gt 0 ]; do
 	case "$1" in
 		--lang)   LANG_SELECTION="${2:-}"; shift ;;
 		--lang=*) LANG_SELECTION="${1#*=}" ;;
-		--mihomo)   MIHOMO="${2:-}"; shift ;;
-		--mihomo=*) MIHOMO="${1#*=}" ;;
 		--tag)   TAG="${2:-}"; shift ;;
 		--tag=*) TAG="${1#*=}" ;;
 		--repo)   REPO="${2:-}"; shift ;;
@@ -61,11 +56,6 @@ while [ "$#" -gt 0 ]; do
 	esac
 	shift
 done
-
-case "$MIHOMO" in
-	meta|alpha) ;;
-	*) echo "--mihomo принимает meta или alpha, получено «$MIHOMO»"; exit 1 ;;
-esac
 
 # check env
 if [ ! -x "/bin/opkg" ] && [ ! -x "/usr/bin/apk" ]; then
@@ -126,10 +116,44 @@ pkg_version() {
 
 installed_version() {
 	if [ -x "/bin/opkg" ]; then
+		# nikki - 2026.04.08-3
 		opkg list-installed "$1" 2>/dev/null | awk -v n="$1" '$1 == n { print $3; exit }'
-	else
-		apk list --installed --manifest "$1" 2>/dev/null | awk -v n="$1" '$1 == n { print $2; exit }'
+		return
 	fi
+	# apk печатает по-разному в зависимости от версии и флагов:
+	#   nikki-2026.04.08-r3 aarch64_cortex-a53 {nikki} (GPL-3.0) [installed]
+	#   nikki 2026.04.08-r3                                       (--manifest)
+	# поэтому разбираем обе формы, а не полагаемся на одну.
+	{ apk list --installed --manifest "$1" 2>/dev/null; apk list --installed "$1" 2>/dev/null; } |
+	while read -r first second _; do
+		case "$first" in
+			"$1")
+				[ -n "$second" ] || continue
+				echo "$second"
+				break
+				;;
+			"$1"-[0-9]*)
+				echo "${first#"$1"-}"
+				break
+				;;
+		esac
+	done
+}
+
+# установлен ли пакет вообще — на случай, если версию вытащить не вышло
+is_installed() {
+	[ -n "$(installed_version "$1")" ] && return 0
+	[ -x "/usr/bin/apk" ] && apk info -e "$1" >/dev/null 2>&1 && return 0
+	return 1
+}
+
+# свободно килобайт там, где живёт /usr/libexec
+free_space_kb() {
+	for dir in /overlay /; do
+		[ -d "$dir" ] || continue
+		df -k "$dir" 2>/dev/null | awk 'NR == 2 { print $4; exit }'
+		return
+	done
 }
 
 # resolve tag
@@ -155,58 +179,53 @@ if ! wget -q -O "$asset" "https://github.com/$REPO/releases/download/$TAG/$asset
 	echo "в релизе $TAG нет сборки под $arch / $branch"
 	exit 1
 fi
-tar -x -z -f "$asset"
-rm -f "$asset"
+# /tmp — это tmpfs, то есть оперативная память. Архив содержит несколько
+# пакетов, и распаковка всего подряд (два ядра mihomo — это ~92 МБ) кладёт
+# роутер по OOM. Поэтому сначала читаем список, а достаём только нужное.
+members="$(tar -t -z -f "$asset" | sed 's|^\./||' | grep "\.$ext\$" || true)"
+if [ -z "$members" ]; then
+	echo "в архиве нет пакетов .$ext"
+	exit 1
+fi
 
-# ядро mihomo: mihomo-meta и mihomo-alpha конфликтуют, ставим ровно одно
+# ядро: ставим только mihomo-meta (сборки из тегированных релизов MetaCubeX).
+# mihomo-alpha — ночная ветка, из установки исключён намеренно.
 mihomo_file=""
-for file in mihomo-*."$ext"; do
-	[ -f "$file" ] || continue
+for file in $members; do
 	case "$file" in
-		"mihomo-${MIHOMO}_"*|"mihomo-${MIHOMO}-"*)
+		mihomo-meta_*|mihomo-meta-*)
 			mihomo_file="$file"
+			break
 			;;
 	esac
 done
 if [ -z "$mihomo_file" ]; then
-	for file in mihomo-*."$ext"; do
-		[ -f "$file" ] || continue
-		mihomo_file="$file"
-		break
-	done
-	if [ -n "$mihomo_file" ]; then
-		echo "в сборке нет mihomo-$MIHOMO, ставлю $mihomo_file"
-		MIHOMO="$(pkg_name "$mihomo_file")"
-		MIHOMO="${MIHOMO#mihomo-}"
-	fi
+	echo "в сборке $TAG нет mihomo-meta"
+	exit 1
 fi
-[ -n "$mihomo_file" ] && echo "mihomo: $(pkg_name "$mihomo_file") $(pkg_version "$mihomo_file")"
+echo "mihomo: $(pkg_name "$mihomo_file") $(pkg_version "$mihomo_file")"
 
-# второй вариант ядра снимать автоматически опасно: от него зависит nikki
-if [ "$MIHOMO" = "meta" ]; then other="alpha"; else other="meta"; fi
-if [ -n "$(installed_version "mihomo-$other")" ]; then
+# если на роутере осталось альфа-ядро, оно конфликтует с meta
+if is_installed "mihomo-alpha"; then
 	echo ""
-	echo "на роутере стоит mihomo-$other, а ставится mihomo-$MIHOMO — пакеты конфликтуют."
-	echo "сначала снять старое ядро вместе с зависимыми, затем запустить скрипт снова:"
-	echo ""
+	echo "установлен mihomo-alpha, он конфликтует с mihomo-meta"
 	if [ -x "/bin/opkg" ]; then
-		echo "  /etc/init.d/nikki stop"
-		echo "  opkg remove luci-app-nikki nikki mihomo-$other"
+		echo "  opkg remove luci-app-nikki nikki mihomo-alpha"
 	else
-		echo "  /etc/init.d/nikki stop"
-		echo "  apk del luci-app-nikki nikki mihomo-$other"
+		echo "  apk del luci-app-nikki nikki mihomo-alpha"
 	fi
-	echo ""
-	echo "конфиг /etc/config/nikki при этом сохраняется."
 	exit 1
 fi
 
 # переводы, которые есть в сборке
 available=""
-for file in luci-i18n-nikki-*."$ext"; do
-	[ -f "$file" ] || continue
-	lang="$(pkg_name "$file")"
-	available="$available ${lang#luci-i18n-nikki-}"
+for file in $members; do
+	case "$file" in
+		luci-i18n-nikki-*)
+			lang="$(pkg_name "$file")"
+			available="$available ${lang#luci-i18n-nikki-}"
+			;;
+	esac
 done
 available="$(echo $available)"
 
@@ -237,15 +256,15 @@ esac
 if [ -n "$languages" ]; then
 	echo "languages: $languages"
 elif [ -n "$available" ]; then
-	echo "languages: english only (в сборке есть: $available — добавить: --lang ru)"
+	echo "languages: none (в сборке: $available)"
 fi
 
 # что вообще относится к этой установке
 candidates=""
-for file in *."$ext"; do
-	[ -f "$file" ] || continue
+for file in $members; do
 	case "$file" in
 		mihomo-*)
+			# в архиве может лежать и mihomo-alpha — он не ставится
 			[ "$file" = "$mihomo_file" ] && candidates="$candidates $file"
 			;;
 		luci-i18n-nikki-*)
@@ -286,14 +305,51 @@ for file in $candidates; do
 done
 
 if [ "$#" -eq 0 ]; then
-	echo "всё актуально: $skipped пакетов уже нужной версии, сервис не трогаю"
-	echo "переустановить принудительно: --force"
+	echo "всё актуально: $skipped пакетов уже нужной версии"
+	echo "переустановить: ash -s -- --force"
 	exit 0
 fi
 [ "$skipped" -gt 0 ] && echo "без изменений: $skipped"
 
+# ядро mihomo — это ~50 МБ распакованного файла. Каталог распаковки лежит
+# в /tmp, а /tmp на OpenWrt — это tmpfs, то есть оперативная память: не хватит
+# места — роутер уйдёт в OOM прямо посреди установки. Поэтому проверяем оба
+# ресурса заранее: память под распаковку и overlay под саму установку.
+need_mb=8
+case " $* " in
+	*mihomo-*) need_mb=60 ;;
+esac
+
+tmp_kb="$(df -k "$work" 2>/dev/null | awk 'NR == 2 { print $4; exit }')"
+if [ "$FORCE" = 0 ] && [ -n "$tmp_kb" ] && [ "$tmp_kb" -lt $((need_mb * 1024)) ]; then
+	echo ""
+	echo "$work: свободно $((tmp_kb / 1024)) МБ, нужно ~$need_mb МБ (tmpfs)"
+	exit 1
+fi
+
+overlay_kb="$(free_space_kb)"
+if [ "$FORCE" = 0 ] && [ -n "$overlay_kb" ] && [ "$overlay_kb" -lt $((need_mb * 1024)) ]; then
+	echo ""
+	echo "/overlay: свободно $((overlay_kb / 1024)) МБ, нужно ~$need_mb МБ"
+	echo "обойти проверку: ash -s -- --force"
+	exit 1
+fi
+echo "свободно: tmpfs $((tmp_kb / 1024)) МБ, overlay $((overlay_kb / 1024)) МБ"
+
+# достаём из архива ровно выбранные пакеты и сразу удаляем сам архив,
+# чтобы в tmpfs не лежало лишнего
+echo "unpack: $#"
+tar -x -z -f "$asset" "$@"
+rm -f "$asset"
+for file in "$@"; do
+	if [ ! -f "$file" ]; then
+		echo "не удалось распаковать $file"
+		exit 1
+	fi
+done
+
 # install
-echo "update feeds"
+echo "update OpenWrt indexes (for dependencies)"
 if [ -x "/bin/opkg" ]; then
 	opkg update
 	echo "install ipks"
