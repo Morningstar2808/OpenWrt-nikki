@@ -10,13 +10,13 @@ if [ -x "/bin/opkg" ]; then
 	[ -n "$i18n" ] && opkg remove $i18n
 	opkg remove luci-app-nikki
 	opkg remove nikki
-	opkg remove mihomo-meta mihomo-alpha
+	opkg remove mihomo-meta
 elif [ -x "/usr/bin/apk" ]; then
 	i18n="$(apk list --installed --manifest 'luci-i18n-nikki-*' | cut -d ' ' -f 1)"
 	[ -n "$i18n" ] && apk del $i18n
 	apk del luci-app-nikki
 	apk del nikki
-	apk del mihomo-meta mihomo-alpha
+	apk del mihomo-meta
 fi
 # remove config
 rm -f /etc/config/nikki
