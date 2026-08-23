@@ -1,14 +1,25 @@
-![GitHub License](https://img.shields.io/github/license/nikkinikki-org/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Tag](https://img.shields.io/github/v/release/nikkinikki-org/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/nikkinikki-org/OpenWrt-nikki/total?style=for-the-badge&logo=github) ![GitHub Repo stars](https://img.shields.io/github/stars/nikkinikki-org/OpenWrt-nikki?style=for-the-badge&logo=github) [![Telegram](https://img.shields.io/badge/Telegram-gray?style=for-the-badge&logo=telegram)](https://t.me/nikkinikki_org)
+![GitHub License](https://img.shields.io/github/license/Morningstar2808/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Tag](https://img.shields.io/github/v/release/Morningstar2808/OpenWrt-nikki?include_prereleases&style=for-the-badge&logo=github) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Morningstar2808/OpenWrt-nikki/total?style=for-the-badge&logo=github)
 
 English
 
-# Nikki
+# Nikki (fork)
 
 Transparent Proxy with Mihomo on OpenWrt.
 
+Fork of [nikkinikki-org/OpenWrt-nikki](https://github.com/nikkinikki-org/OpenWrt-nikki).
+
+What is different here:
+
+- custom HTTP headers for subscription downloads, including device identification (HWID) — see [upstream PR #879](https://github.com/nikkinikki-org/OpenWrt-nikki/pull/879)
+- own version numbering, starting at 1.27.0 — one minor ahead of upstream
+- packages are published as GitHub Releases only; there is no package feed (yet), so updating means running the install script again
+- builds are limited to `aarch64_cortex-a53`, `aarch64_generic`, `mipsel_24kc`, `x86_64` on OpenWrt 24.10 and 25.12
+
+Tags with a suffix (`v1.27.0-rc1`) are published as pre-releases, tags without one (`v1.27.0`) as regular releases.
+
 ## Prerequisites
 
-- OpenWrt >= 24.10
+- OpenWrt 24.10 or 25.12
 - Linux Kernel >= 5.13
 - firewall4
 
@@ -19,47 +30,49 @@ Transparent Proxy with Mihomo on OpenWrt.
 - Profile Mixin
 - Profile Editor
 - Scheduled Restart
+- Custom HTTP headers for subscription downloads (HWID and similar)
 
 ## Install & Update
 
-### A. Install From Feed (Recommended)
-
-1. Add Feed
-
 ```shell
-# only needs to be run once
-wget -O - https://github.com/nikkinikki-org/OpenWrt-nikki/raw/refs/heads/main/feed.sh | ash
+wget -O - https://github.com/Morningstar2808/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
 ```
 
-2. Install
+The script detects the router's architecture and OpenWrt branch, downloads the
+matching asset from the latest release (pre-releases included) and installs the
+packages. Translations are installed only for languages already present on the
+router. Running it again installs a newer release — that is the update path.
+
+Pinning a specific version or another mirror:
 
 ```shell
-# you can install from shell or `Software` menu in LuCI
-# for opkg
-opkg install nikki
-opkg install luci-app-nikki
-opkg install luci-i18n-nikki-zh-cn
-# for apk
-apk add nikki
-apk add luci-app-nikki
-apk add luci-i18n-nikki-zh-cn
+# конкретный релиз
+NIKKI_TAG=v1.27.0-rc1 sh install.sh
+# другой репозиторий с теми же ассетами
+NIKKI_REPO=owner/repo sh install.sh
 ```
 
-### B. Install From Release
+Manual install, if the script cannot be used:
 
 ```shell
-wget -O - https://github.com/nikkinikki-org/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
+# 1. find your arch and branch
+. /etc/openwrt_release; echo "$DISTRIB_ARCH $DISTRIB_RELEASE"
+# 2. download nikki_<arch>-<branch>.tar.gz from the Releases page
+# 3. unpack and install
+tar -x -z -f nikki_<arch>-<branch>.tar.gz
+opkg install ./*.ipk                      # OpenWrt 24.10
+apk add --allow-untrusted ./*.apk         # OpenWrt 25.12
 ```
 
 ## Uninstall & Reset
 
 ```shell
-wget -O - https://github.com/nikkinikki-org/OpenWrt-nikki/raw/refs/heads/main/uninstall.sh | ash
+wget -O - https://github.com/Morningstar2808/OpenWrt-nikki/raw/refs/heads/main/uninstall.sh | ash
 ```
 
 ## How To Use
 
-See [Wiki](https://github.com/nikkinikki-org/OpenWrt-nikki/wiki)
+See the [upstream Wiki](https://github.com/nikkinikki-org/OpenWrt-nikki/wiki).
 
 ## How does it work
 
@@ -75,7 +88,7 @@ Note that the steps above may change base on config.
 
 ```shell
 # add feed
-echo "src-git nikki https://github.com/nikkinikki-org/OpenWrt-nikki.git;main" >> "feeds.conf.default"
+echo "src-git nikki https://github.com/Morningstar2808/OpenWrt-nikki.git;main" >> "feeds.conf.default"
 # update & install feeds
 ./scripts/feeds update -a
 ./scripts/feeds install -a
@@ -98,19 +111,12 @@ The package files will be found under `bin/packages/your_architecture/nikki`.
 - kmod-tun
 - kmod-dummy
 
-## Contributors
+## Credits
 
-[![Contributors](https://contrib.rocks/image?repo=nikkinikki-org/OpenWrt-nikki)](https://github.com/nikkinikki-org/OpenWrt-nikki/graphs/contributors)
+Upstream project by [nikkinikki-org](https://github.com/nikkinikki-org/OpenWrt-nikki) and its
+[contributors](https://github.com/nikkinikki-org/OpenWrt-nikki/graphs/contributors).
 
 ## Special Thanks
 
 - [@ApoisL](https://github.com/apoiston)
 - [@xishang0128](https://github.com/xishang0128)
-
-## Recommended Proxy Provider
-
-Perfect Link is recommended
-
-All route on IEPL, All exit node at Akari, reliable and easy to use
-
-[Official Website](https://perfectlink.io) | [Customer Service](https://t.me/PerfectlinksupportBot)

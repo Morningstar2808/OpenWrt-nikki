@@ -1,15 +1,19 @@
 #!/bin/sh
 
-# Nikki's uninstaller
+# nikki (fork) uninstaller
+#
+#   wget -O - https://github.com/Morningstar2808/OpenWrt-nikki/raw/refs/heads/main/uninstall.sh | ash
 
 # uninstall
 if [ -x "/bin/opkg" ]; then
-	opkg list-installed luci-i18n-nikki-* | cut -d ' ' -f 1 | xargs opkg remove
+	i18n="$(opkg list-installed 'luci-i18n-nikki-*' | cut -d ' ' -f 1)"
+	[ -n "$i18n" ] && opkg remove $i18n
 	opkg remove luci-app-nikki
 	opkg remove nikki
 	opkg remove mihomo-meta mihomo-alpha
 elif [ -x "/usr/bin/apk" ]; then
-	apk list --installed --manifest luci-i18n-nikki-* | cut -d ' ' -f 1 | xargs apk del
+	i18n="$(apk list --installed --manifest 'luci-i18n-nikki-*' | cut -d ' ' -f 1)"
+	[ -n "$i18n" ] && apk del $i18n
 	apk del luci-app-nikki
 	apk del nikki
 	apk del mihomo-meta mihomo-alpha
@@ -19,19 +23,16 @@ rm -f /etc/config/nikki
 # remove files
 rm -rf /etc/nikki
 # remove log
-rm -rf /var/log/nikki
+rm -rf /var/log/nikki /tmp/log/nikki
 # remove temp
 rm -rf /var/run/nikki
-# remove feed
+# remove leftover feed entry (если раньше подключался фид апстрима)
 if [ -x "/bin/opkg" ]; then
 	if grep -q nikki /etc/opkg/customfeeds.conf; then
 		sed -i '/nikki/d' /etc/opkg/customfeeds.conf
 	fi
-	wget -O "nikki.pub" "https://nikkinikki.pages.dev/key-build.pub"
-	opkg-key remove nikki.pub
-	rm -f nikki.pub
 elif [ -x "/usr/bin/apk" ]; then
-	if grep -q nikki /etc/apk/repositories.d/customfeeds.list; then
+	if [ -f /etc/apk/repositories.d/customfeeds.list ] && grep -q nikki /etc/apk/repositories.d/customfeeds.list; then
 		sed -i '/nikki/d' /etc/apk/repositories.d/customfeeds.list
 	fi
 	rm -f /etc/apk/keys/nikki.pem

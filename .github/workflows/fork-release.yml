@@ -1,10 +1,19 @@
 name: fork-release
 
 # Собирает пакеты и кладёт их в GitHub Releases.
-# Запуск: push любого тега вида v*, либо вручную (workflow_dispatch).
+# Запуск: push тега вида v* (релиз), либо вручную — workflow_dispatch собирает
+# артефакты без релиза.
+#
+# Нумерация: своя, на минор впереди апстрима (апстрим 1.26.1 -> форк 1.27.0).
+# Версия тега = PKG_VERSION из luci-app-nikki/Makefile, это проверяется перед
+# публикацией. Тег с суффиксом (v1.27.0-rc1, -beta2) публикуется как Pre-release,
+# тег без суффикса (v1.27.0) — как обычный релиз.
 #
 # Матрица урезана до 4 архитектур x 2 веток OpenWrt: полная (как у апстрима)
 # это 72 джобы. Без Cloudflare Pages и без подписи фида — ставим .ipk/.apk напрямую.
+#
+# Релиз создаёт отдельная джоба после матрицы: один вызов action-gh-release
+# вместо восьми параллельных, которые дерутся за один и тот же тег.
 
 on:
   push:
@@ -13,13 +22,14 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     name: ${{ matrix.arch }}-${{ matrix.branch }}
     runs-on: ubuntu-latest
-    continue-on-error: true
+    # continue-on-error здесь НЕ ставим: с ним упавшая джоба отображается зелёной,
+    # и «сборка прошла, релиза нет» выглядит как успешный запуск.
     strategy:
       fail-fast: false
       matrix:
@@ -51,6 +61,7 @@ jobs:
       - name: compress
         run: |
           set -eux
+          test -d "bin/packages/${{ matrix.arch }}/nikki"
           tar -c -z -f "nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz" \
             -C "bin/packages/${{ matrix.arch }}/nikki" .
 
@@ -59,13 +70,49 @@ jobs:
         with:
           name: nikki_${{ matrix.arch }}-${{ matrix.branch }}
           path: nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    name: release
+    needs: build
+    # always(): если часть архитектур упала, релиз всё равно собираем из того, что есть.
+    if: ${{ always() && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+
+      - name: check version
+        # Тег и PKG_VERSION должны совпадать, иначе релиз v1.27.0 приедет
+        # с пакетами 1.26.1 и роутер не увидит обновление.
+        run: |
+          set -eu
+          tag="${GITHUB_REF_NAME#v}"
+          base="${tag%%-*}"
+          pkg="$(sed -n 's/^PKG_VERSION:=//p' luci-app-nikki/Makefile)"
+          echo "тег: $GITHUB_REF_NAME | база версии: $base | luci-app-nikki: $pkg"
+          if [ "$base" != "$pkg" ]; then
+            echo "::error::тег $GITHUB_REF_NAME не соответствует PKG_VERSION=$pkg в luci-app-nikki/Makefile"
+            exit 1
+          fi
+
+      - name: download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: nikki_*
+          merge-multiple: true
+
+      - name: list files
+        run: ls -l nikki_*.tar.gz
 
       - name: release
-        if: github.event_name == 'push' && startsWith(github.ref_name, 'v')
         uses: softprops/action-gh-release@v3
         with:
           name: ${{ github.ref_name }}
-          # Тестовые сборки помечаются Pre-release. Снять, когда версия станет стабильной.
-          prerelease: true
-          files: nikki_${{ matrix.arch }}-${{ matrix.branch }}.tar.gz
+          # Тег с суффиксом (-rc1, -beta1) -> Pre-release, без суффикса -> обычный релиз.
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: nikki_*.tar.gz
           fail_on_unmatched_files: true
