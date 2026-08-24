@@ -1,26 +1,26 @@
-![GitHub License](https://img.shields.io/github/license/Morningstar2808/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Tag](https://img.shields.io/github/v/release/Morningstar2808/OpenWrt-nikki?include_prereleases&style=for-the-badge&logo=github) ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Morningstar2808/OpenWrt-nikki/total?style=for-the-badge&logo=github)
+![GitHub License](https://img.shields.io/github/license/Morningstar2808/OpenWrt-nikki?style=for-the-badge&logo=github) ![GitHub Tag](https://img.shields.io/github/v/release/Morningstar2808/OpenWrt-nikki?style=for-the-badge&logo=github)
 
-English
+**Languages:** [English](README.md) | [Русский](README.ru.md)
 
 # Nikki
 
 Transparent Proxy with Mihomo on OpenWrt.
 
-What is different here:
+## What is different here
 
-- own version numbering, starting at 1.27.0 — one minor ahead of upstream
-- packages are published as GitHub Releases only; there is no package feed (yet), so updating means running the install script again
-- builds are limited to `aarch64_cortex-a53`, `aarch64_generic`, `mipsel_24kc`, `x86_64` on OpenWrt 24.10 and 25.12
+- Own version numbering, starting at 1.27.0 — one minor ahead of upstream
+- Packages are published as GitHub Releases only; there is no package feed (yet), so updating means running the install script again
+- Builds are limited to `aarch64_cortex-a53`, `aarch64_generic`, `mipsel_24kc`, `x86_64` on OpenWrt 24.10 and 25.12
 
 Tags with a suffix (`v1.27.0-rc1`) are published as pre-releases, tags without one (`v1.27.0`) as regular releases.
 
-## Prerequisites
+## Requirements
 
 - OpenWrt 24.10 or 25.12
 - Linux Kernel >= 5.13
 - firewall4
 
-## Feature
+## Features
 
 - Transparent Proxy (Redirect/TPROXY/TUN, IPv4 and/or IPv6)
 - Access Control
@@ -29,51 +29,41 @@ Tags with a suffix (`v1.27.0-rc1`) are published as pre-releases, tags without o
 - Scheduled Restart
 - Custom HTTP headers for subscription downloads (HWID and similar)
 
-## Install & Update
+## Installation & Update
 
 ```shell
 wget -O - https://github.com/Morningstar2808/OpenWrt-nikki/raw/refs/heads/main/install.sh | ash
 ```
 
-The script detects the router's architecture and OpenWrt branch, downloads the
-matching asset from the latest release (pre-releases included) and installs it.
-Running it again is the update path — and it is safe to repeat: only packages
-whose version differs from what is installed are touched, so an unchanged run
-leaves the service alone instead of restarting it.
+The script detects the router's architecture and OpenWrt branch, downloads the matching asset from the latest release (pre-releases included) and installs it. Running it again is the update path — and it is safe to repeat: only packages whose version differs from what is installed are touched, so an unchanged run leaves the service alone instead of restarting it.
 
-LuCI translations are not installed by default — the interface stays English.
-The script prints which translations the build contains.
+LuCI translations are not installed by default — the interface stays English. The script prints which translations the build contains.
 
 Options (arguments, or the matching `NIKKI_*` environment variables):
 
 ```shell
-# переводы LuCI: коды через пробел, или all
+# LuCI translations: space-separated codes or all
 wget -O - .../install.sh | ash -s -- --lang ru
 wget -O - .../install.sh | ash -s -- --lang "ru zh-cn"
-# конкретный релиз / другое зеркало
+# specific release / alternative mirror
 wget -O - .../install.sh | ash -s -- --tag v1.27.0-rc2 --repo owner/repo
-# переустановить, даже если версии совпадают
+# reinstall, even if versions match
 wget -O - .../install.sh | ash -s -- --force
-# справка
+# help
 wget -O - .../install.sh | ash -s -- --help
 ```
 
 The core is always `mihomo-meta`, built from MetaCubeX's tagged releases.
-`mihomo-alpha` (nightly branch) is never installed. If it is still present on
-the router from an earlier install, the script stops and prints the removal
-commands — the two packages conflict.
 
-Before installing the core the script also checks free space on `/overlay` and
-stops if there is not enough, instead of running the router out of memory
-halfway through unpacking.
+### Manual Installation
 
-Manual install, if the script cannot be used:
+If the script cannot be used:
 
 ```shell
-# 1. find your arch and branch
+# 1. Find your architecture and branch
 . /etc/openwrt_release; echo "$DISTRIB_ARCH $DISTRIB_RELEASE"
-# 2. download nikki_<arch>-<branch>.tar.gz from the Releases page
-# 3. unpack and install
+# 2. Download nikki_<arch>-<branch>.tar.gz from the Releases page
+# 3. Unpack and install
 tar -x -z -f nikki_<arch>-<branch>.tar.gz
 opkg install ./*.ipk                      # OpenWrt 24.10
 apk add --allow-untrusted ./*.apk         # OpenWrt 25.12
@@ -85,29 +75,29 @@ apk add --allow-untrusted ./*.apk         # OpenWrt 25.12
 wget -O - https://github.com/Morningstar2808/OpenWrt-nikki/raw/refs/heads/main/uninstall.sh | ash
 ```
 
-## How To Use
+## How to Use
 
 See the [upstream Wiki](https://github.com/nikkinikki-org/OpenWrt-nikki/wiki).
 
-## How does it work
+## How it Works
 
-1. Mixin and Update profile.
-2. Run mihomo.
-3. Set scheduled restart.
-4. Set ip rule/route
-5. Generate nftables and apply it.
+1. Mixin and update profile
+2. Run mihomo
+3. Set scheduled restart
+4. Set IP rule/route
+5. Generate nftables and apply it
 
-Note that the steps above may change base on config.
+Note: The steps above may change based on configuration.
 
 ## Compilation
 
 ```shell
-# add feed
+# Add feed
 echo "src-git nikki https://github.com/Morningstar2808/OpenWrt-nikki.git;main" >> "feeds.conf.default"
-# update & install feeds
+# Update & install feeds
 ./scripts/feeds update -a
 ./scripts/feeds install -a
-# make package
+# Compile package
 make package/luci-app-nikki/compile
 ```
 
@@ -125,4 +115,3 @@ The package files will be found under `bin/packages/your_architecture/nikki`.
 - kmod-nft-tproxy
 - kmod-tun
 - kmod-dummy
-
