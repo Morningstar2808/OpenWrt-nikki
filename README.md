@@ -2,15 +2,12 @@
 
 English
 
-# Nikki (fork)
+# Nikki
 
 Transparent Proxy with Mihomo on OpenWrt.
 
-Fork of [nikkinikki-org/OpenWrt-nikki](https://github.com/nikkinikki-org/OpenWrt-nikki).
-
 What is different here:
 
-- custom HTTP headers for subscription downloads, including device identification (HWID) — see [upstream PR #879](https://github.com/nikkinikki-org/OpenWrt-nikki/pull/879)
 - own version numbering, starting at 1.27.0 — one minor ahead of upstream
 - packages are published as GitHub Releases only; there is no package feed (yet), so updating means running the install script again
 - builds are limited to `aarch64_cortex-a53`, `aarch64_generic`, `mipsel_24kc`, `x86_64` on OpenWrt 24.10 and 25.12
