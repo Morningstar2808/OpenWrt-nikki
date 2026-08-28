@@ -52,6 +52,11 @@ feed_url="$FEED_BASE/$branch/$arch/nikki"
 if [ -x "/bin/opkg" ]; then
 	echo "add key"
 	wget -q -O "/tmp/key-build.pub" "$FEED_BASE/key-build.pub"
+	if [ ! -s "/tmp/key-build.pub" ]; then
+		echo "не удалось скачать $FEED_BASE/key-build.pub"
+		rm -f "/tmp/key-build.pub"
+		exit 1
+	fi
 	opkg-key add "/tmp/key-build.pub"
 	rm -f "/tmp/key-build.pub"
 
@@ -65,7 +70,14 @@ if [ -x "/bin/opkg" ]; then
 	opkg update
 else
 	echo "add key"
-	wget -q -O "/etc/apk/keys/nikki.pem" "$FEED_BASE/public-key.pem"
+	wget -q -O "/tmp/nikki.pem" "$FEED_BASE/public-key.pem"
+	if [ ! -s "/tmp/nikki.pem" ]; then
+		echo "не удалось скачать $FEED_BASE/public-key.pem"
+		rm -f "/tmp/nikki.pem"
+		exit 1
+	fi
+	mkdir -p /etc/apk/keys
+	mv "/tmp/nikki.pem" "/etc/apk/keys/nikki.pem"
 
 	echo "add feed"
 	mkdir -p /etc/apk/repositories.d

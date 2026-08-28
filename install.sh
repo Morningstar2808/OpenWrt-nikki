@@ -14,6 +14,8 @@
 # Аргументы (или переменные окружения):
 #   --lang   <коды|all|none>   NIKKI_LANG    переводы LuCI, по умолчанию none
 #   --tag    <тег>             NIKKI_TAG     конкретный релиз, по умолчанию последний
+#                                            стабильный
+#   --pre                      NIKKI_PRE=1   разрешить pre-release (rc, beta)
 #   --repo   <owner/repo>      NIKKI_REPO    другое зеркало релизов
 #   --force                                  переставить, даже если версии совпали
 #   --help
@@ -23,6 +25,7 @@ set -e
 REPO="${NIKKI_REPO:-Morningstar2808/OpenWrt-nikki}"
 TAG="${NIKKI_TAG:-}"
 LANG_SELECTION="${NIKKI_LANG:-none}"
+PRE="${NIKKI_PRE:-0}"
 FORCE=0
 
 usage() {
@@ -31,6 +34,7 @@ nikki (fork) installer
 
   --lang   <коды|all|none>  переводы LuCI: "ru", "ru zh-cn", all. По умолчанию none
   --tag    <тег>            конкретный релиз, например v1.27.0-rc2
+  --pre                     брать последний релиз, включая pre-release
   --repo   <owner/repo>     другой репозиторий с теми же ассетами
   --force                   переустановить, даже если версии совпадают
   --help                    эта справка
@@ -42,14 +46,22 @@ nikki (fork) installer
 EOF
 }
 
+need_value() {
+	if [ "$2" -lt 2 ]; then
+		echo "$1 требует значение"
+		exit 1
+	fi
+}
+
 while [ "$#" -gt 0 ]; do
 	case "$1" in
-		--lang)   LANG_SELECTION="${2:-}"; shift ;;
+		--lang)   need_value "$1" "$#"; LANG_SELECTION="$2"; shift ;;
 		--lang=*) LANG_SELECTION="${1#*=}" ;;
-		--tag)   TAG="${2:-}"; shift ;;
+		--tag)   need_value "$1" "$#"; TAG="$2"; shift ;;
 		--tag=*) TAG="${1#*=}" ;;
-		--repo)   REPO="${2:-}"; shift ;;
+		--repo)   need_value "$1" "$#"; REPO="$2"; shift ;;
 		--repo=*) REPO="${1#*=}" ;;
+		--pre) PRE=1 ;;
 		--force) FORCE=1 ;;
 		--help|-h) usage; exit 0 ;;
 		*) echo "неизвестный аргумент: $1"; echo; usage; exit 1 ;;
@@ -158,12 +170,27 @@ free_space_kb() {
 
 # resolve tag
 if [ -z "$TAG" ]; then
-	echo "get latest release"
-	wget -q -O "/tmp/nikki.releases" "https://api.github.com/repos/$REPO/releases?per_page=1"
-	TAG="$(jsonfilter -i "/tmp/nikki.releases" -e "@[0].tag_name")"
+	# по умолчанию — только стабильные релизы: /releases/latest их и отдаёт,
+	# pre-release в него не попадает. --pre берёт самый свежий вообще.
+	if [ "$PRE" = 1 ]; then
+		echo "get latest release (pre-release allowed)"
+		api="https://api.github.com/repos/$REPO/releases?per_page=1"
+		filter="@[0].tag_name"
+	else
+		echo "get latest stable release"
+		api="https://api.github.com/repos/$REPO/releases/latest"
+		filter="@.tag_name"
+	fi
+	wget -q -O "/tmp/nikki.releases" "$api" || true
+	TAG="$(jsonfilter -i "/tmp/nikki.releases" -e "$filter" 2>/dev/null)"
 	rm -f "/tmp/nikki.releases"
 	if [ -z "$TAG" ]; then
-		echo "не удалось определить последний релиз $REPO"
+		if [ "$PRE" = 1 ]; then
+			echo "не удалось определить последний релиз $REPO"
+		else
+			echo "у $REPO нет стабильных релизов"
+			echo "поставить тестовый: ash -s -- --pre"
+		fi
 		exit 1
 	fi
 fi
