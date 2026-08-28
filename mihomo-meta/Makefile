@@ -2,9 +2,6 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mihomo-meta
 PKG_VERSION:=1.19.30
-# Без PKG_RELEASE пересборка того же PKG_VERSION даёт пакет с той же версией:
-# роутер считает, что обновления нет, и остаётся на старом бинарнике.
-PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
