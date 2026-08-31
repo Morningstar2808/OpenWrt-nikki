@@ -103,12 +103,13 @@ return view.extend({
         o.rmempty = false;
 
         o = s.option(form.Value, 'user_agent', _('User Agent'));
-        o.default = 'clash';
+        o.default = 'nikki-openwrt';
         o.modalonly = true;
         o.rmempty = false;
         o.value('clash');
         o.value('clash.meta');
         o.value('mihomo');
+        o.value('nikki-openwrt');
 
         o = s.option(form.ListValue, 'hwid', _('HWID'));
         o.description = _('Send device identification headers with the subscription request. Required by panels which bind a subscription to a device.');
